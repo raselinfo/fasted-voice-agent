@@ -1,0 +1,34 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "voice-agent",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-04-05",
+  "account_id": "8f13749dbcfe35f8a9d5953ff1270a2c",
+  "ai": {
+    "binding": "AI"
+  },
+  "vars": {
+    "APP_BASE_PATH": "/voice-agent",
+    "TURN_DETECTOR_PROVIDER": "workers-ai-flux",
+    "TTS_PROVIDER": "workers-ai-aura",
+    "TEXT_GENERATOR_PROVIDER": "workers-ai",
+    "POSTHOG_API_HOST": "https://us.i.posthog.com",
+    "POSTHOG_ENABLE_SESSION_REPLAY": "false",
+    "POSTHOG_CAPTURE_TRANSCRIPTS": "true"
+  },
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "invocation_logs": true
+    }
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "SESSION_DO", "class_name": "SessionDO" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["SessionDO"] }],
+  "assets": {
+    "directory": "src/web",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  }
+}

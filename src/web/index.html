@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Voice Agent</title>
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-sans/index.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-mono/index.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5/index.min.css" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <!-- Orb section -->
+    <div class="orb-section">
+      <div class="orb-wrap">
+        <!-- <div class="orb-glow"></div> -->
+        <canvas id="orb"></canvas>
+        <div class="orb-ring"></div>
+      </div>
+      <p id="session-status">idle</p>
+      <p id="ttfa-timer">0ms</p>
+      <div class="call-buttons">
+        <button id="start-session-btn" type="button" aria-label="Start call">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+          </svg>
+        </button>
+        <button id="end-session-btn" type="button" disabled aria-label="End call">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/>
+            <line x1="1" y1="1" x2="23" y2="23"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <div class="control-group">
+        <span class="control-label">Scenario</span>
+        <div class="pill-group" id="scenario-pills">
+          <button class="pill active" data-value="drive-thru">Drive-Thru</button>
+          <button class="pill" data-value="restaurant-booking">Booking</button>
+          <button class="pill" data-value="customer-support">Support</button>
+        </div>
+      </div>
+      <div class="control-group">
+        <span class="control-label">TTS Model</span>
+        <div class="segmented" id="tts-provider-segmented">
+          <button class="seg-btn active" data-value="aura-2-edge">Aura 2 (Edge)</button>
+          <button class="seg-btn" data-value="elevenlabs-flash">ElevenLabs</button>
+          <button class="seg-btn" data-value="together-orpheus">Orpheus</button>
+          <div class="seg-indicator"></div>
+        </div>
+      </div>
+      <div class="control-group">
+        <span class="control-label">Voice</span>
+        <select id="tts-voice-select" aria-label="Voice">
+          <option data-provider-key="together-orpheus" value="tara">tara</option>
+          <option data-provider-key="together-orpheus" value="leah">leah</option>
+          <option data-provider-key="together-orpheus" value="leo">leo</option>
+          <option data-provider-key="together-orpheus" value="jess">jess</option>
+          <option data-provider-key="elevenlabs-flash" value="CwhRBWXzGAHq8TQ4Fs17">Roger</option>
+          <option data-provider-key="elevenlabs-flash" value="pNInz6obpgDQGcFmaJgB">Adam</option>
+          <option data-provider-key="elevenlabs-flash" value="21m00Tcm4TlvDq8ikWAM">Rachel</option>
+          <option data-provider-key="elevenlabs-flash" value="yoZ06aMxZJJ28mfd3POQ">Sam</option>
+          <option data-provider-key="elevenlabs-flash" value="EXAVITQu4vr4xnSDxMaL">Bella</option>
+          <option data-provider-key="aura-2-edge" value="luna">luna</option>
+          <option data-provider-key="aura-2-edge" value="orion">orion</option>
+          <option data-provider-key="aura-2-edge" value="helena">helena</option>
+          <option data-provider-key="aura-2-edge" value="arcas">arcas</option>
+          <option data-provider-key="aura-2-edge" value="pandora">pandora</option>
+          <option data-provider-key="aura-2-edge" value="pluto">pluto</option>
+        </select>
+      </div>
+    </div>
+
+    <p id="session-error" aria-live="assertive"></p>
+
+    <!-- Two-column panels -->
+    <div class="panels">
+      <section class="panel conversation-panel">
+        <h2>Conversation</h2>
+        <div id="transcript-list" class="panel-scroll"></div>
+      </section>
+      <section class="panel background-panel">
+        <h2>Background Agent</h2>
+        <div id="background-list" class="panel-scroll"></div>
+      </section>
+    </div>
+
+    <!-- Latency waterfall -->
+    <section class="gantt-section">
+      <h2>Latency</h2>
+      <div id="waterfall-container"></div>
+      <button id="gantt-expand-btn" class="expand-btn" hidden aria-label="Show earlier turns">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+    </section>
+  </main>
+  <script src="/vendor/ort/ort.wasm.min.js"></script>
+  <script src="/vendor/vad/bundle.min.js"></script>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

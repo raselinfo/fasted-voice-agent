@@ -1,0 +1,1803 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Voice Agent — Slides</title>
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5/index.min.css" />
+  <script src="/vendor/ort/ort.wasm.min.js"></script>
+  <script src="/vendor/vad/bundle.min.js"></script>
+  <style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #0a0a0a;
+  color: #e0e0e0;
+  font-family: "JetBrains Mono", SFMono-Regular, Consolas, monospace;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  cursor: none;
+}
+
+.slides-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 80px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+.slide.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Progress bar */
+.progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  background: #333;
+  transition: width 0.3s ease;
+  z-index: 100;
+}
+
+/* Slide counter */
+.slide-counter {
+  position: fixed;
+  bottom: 16px;
+  right: 24px;
+  font-size: 11px;
+  color: #333;
+  z-index: 100;
+}
+
+/* ── Slide 1: Pipeline ── */
+
+.gantt-demo {
+  width: 100%;
+  max-width: 1100px;
+}
+
+.gantt-demo .gantt-chart {
+  position: relative;
+  margin-left: 160px;
+  height: 220px;
+}
+
+.gantt-demo .gantt-lane {
+  position: relative;
+  height: 55px;
+  display: flex;
+  align-items: center;
+}
+
+.gantt-demo .gantt-lane-label {
+  position: absolute;
+  left: -160px;
+  width: 148px;
+  text-align: right;
+  font-size: 15px;
+  color: #666;
+  white-space: nowrap;
+}
+
+.gantt-demo .gantt-bar {
+  position: absolute;
+  height: 65%;
+  top: 17.5%;
+  border-radius: 3px;
+  min-width: 2px;
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: opacity 0.5s ease, transform 0.6s cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+.gantt-demo .gantt-bar.visible {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.gantt-demo .gantt-bar.confirm-eot { background: #64748B; }
+.gantt-demo .gantt-bar.llm-ttft { background: #818CF8; }
+.gantt-demo .gantt-bar.llm-stream { background: #6366F1; }
+.gantt-demo .gantt-bar.tts-buffer { background: #EBD59C; opacity: 0.5; }
+.gantt-demo .gantt-bar.tts-process { background: #FBBF24; }
+.gantt-demo .gantt-bar.tts-stream { background: #F59E0B; }
+.gantt-demo .gantt-bar.play-delivery { background: #86EFAC; opacity: 0.7; }
+.gantt-demo .gantt-bar.play-active { background: #22C55E; }
+
+.gantt-demo .gantt-bar.visible.tts-buffer { opacity: 0.5; }
+.gantt-demo .gantt-bar.visible.play-delivery { opacity: 0.7; }
+
+.gantt-demo .gantt-bar:hover {
+  opacity: 1 !important;
+  filter: brightness(1.2);
+}
+
+.gantt-demo,
+.gantt-demo .gantt-bar,
+.gantt-demo .gantt-marker-label {
+  cursor: default;
+}
+
+.gantt-float-tip {
+  display: none;
+  position: fixed;
+  background: #1c1c1c;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-family: inherit;
+  font-size: 10px;
+  color: #ccc;
+  white-space: nowrap;
+  max-width: 240px;
+  line-height: 1.5;
+  z-index: 100;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.gantt-float-tip strong {
+  color: #fff;
+}
+
+.gantt-tooltip-dur {
+  color: #888;
+}
+
+.gantt-demo .gantt-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.gantt-demo .gantt-marker.visible { opacity: 1; }
+
+.gantt-demo .marker-eot { border-left: 1.5px dotted #475569; }
+.gantt-demo .marker-eager-eot { border-left: 1.2px dotted #64748B; }
+.gantt-demo .marker-ttft { border-left: 1.5px dashed #818CF8; }
+.gantt-demo .marker-audio { border-left: 1.5px dashed #F59E0B; }
+
+.gantt-demo .gantt-marker-label {
+  position: absolute;
+  white-space: nowrap;
+  font-size: 13px;
+  left: 6px;
+}
+
+.gantt-demo .marker-eot .gantt-marker-label { color: #64748B; top: -20px; }
+.gantt-demo .marker-eager-eot .gantt-marker-label { color: #8896AB; top: -20px; right: 6px; left: auto; }
+.gantt-demo .marker-ttft .gantt-marker-label { color: #818CF8; bottom: -22px; }
+.gantt-demo .marker-audio .gantt-marker-label { color: #F59E0B; bottom: -22px; }
+
+.gantt-demo .gantt-spec-shade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(99, 102, 241, 0.08);
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.gantt-demo .gantt-spec-shade.visible { opacity: 1; }
+
+.gantt-demo .gantt-stats {
+  text-align: center;
+  font-size: 14px;
+  color: #666;
+  margin-top: 32px;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.gantt-demo .gantt-stats.visible { opacity: 1; }
+
+.gantt-demo .gantt-stat-value {
+  font-weight: 600;
+  color: #999;
+}
+
+/* ── Slide 2: Silence Trim ── */
+
+.waveform-container {
+  width: 100%;
+  max-width: 1100px;
+  position: relative;
+  overflow: visible;
+}
+
+.waveform-canvas {
+  width: 100%;
+  height: 300px;
+  display: block;
+}
+
+.waveform-label {
+  font-size: 14px;
+  color: #666;
+  letter-spacing: 0.2px;
+  margin-bottom: 12px;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.waveform-label.visible { opacity: 1; }
+
+/* ── Slide 3: Edge ── */
+
+.edge-map {
+  width: 100%;
+  max-width: 1100px;
+  position: relative;
+}
+
+.edge-map svg {
+  width: 100%;
+  height: auto;
+  transition: viewBox 0.8s ease;
+}
+
+.edge-map .continent {
+  fill: rgba(255, 255, 255, 0.02);
+  stroke: #2a2a2a;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.edge-map .edge-node {
+  fill: #444;
+}
+
+.edge-map .user-node {
+  fill: #4ade80;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.edge-map .user-node.visible { opacity: 1; }
+
+.edge-map .origin-node {
+  fill: #f87171;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.edge-map .origin-node.visible { opacity: 1; }
+
+.edge-map .route-path {
+  fill: none;
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  vector-effect: non-scaling-stroke;
+}
+
+.edge-map .route-path.visible { opacity: 0.8; }
+
+.edge-map .route-edge { stroke: #4ade80; }
+.edge-map .route-origin { stroke: #f87171; }
+
+.edge-map .map-label {
+  fill: #aaa;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.edge-map .map-label.visible { opacity: 1; }
+
+.edge-map .latency-label {
+  fill: #999;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.edge-map .latency-label.visible { opacity: 1; }
+
+.edge-map .latency-label.fast { fill: #4ade80; }
+.edge-map .latency-label.slow { fill: #f87171; }
+
+/* ── Slide 4: Background Agent ── */
+
+.bg-agent-demo {
+  width: 100%;
+  max-width: 900px;
+}
+
+.bg-agent-section {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  margin-bottom: 24px;
+}
+
+.bg-agent-section.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.bg-agent-label {
+  font-size: 12px;
+  color: #555;
+  letter-spacing: 0.2px;
+  margin-bottom: 8px;
+}
+
+.bg-agent-speech {
+  font-size: 20px;
+  color: #ccc;
+  padding: 16px 20px;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 8px;
+}
+
+.bg-agent-tools {
+  padding: 16px 20px;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 8px;
+  font-size: 15px;
+}
+
+.bg-tool-line {
+  padding: 4px 0;
+  color: #888;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.bg-tool-line.visible { opacity: 1; }
+
+.bg-tool-line .fn { color: #ccc; }
+.bg-tool-line .arrow { color: #444; margin: 0 8px; }
+.bg-tool-line .result { color: #666; font-size: 13px; }
+
+.bg-agent-token-count {
+  font-size: 14px;
+  color: #f87171;
+  text-align: right;
+  margin-top: 8px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.bg-agent-token-count.visible { opacity: 1; }
+
+.bg-agent-compressed {
+  padding: 16px 20px;
+  background: #111;
+  border: 1px solid #1a3a2a;
+  border-radius: 8px;
+  font-size: 17px;
+  color: #4ade80;
+}
+
+.bg-agent-compressed-count {
+  font-size: 14px;
+  color: #4ade80;
+  text-align: right;
+  margin-top: 8px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.bg-agent-compressed-count.visible { opacity: 1; }
+
+/* ── Slide 5: Barge-in / VAD ── */
+
+.vad-demo {
+  width: 100%;
+  max-width: 700px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 60px;
+}
+
+.vad-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.vad-dot {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: #1a1a1a;
+  border: 2px solid #222;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.vad-dot.speaking {
+  background: #1a3a2a;
+  border-color: #4ade80;
+  box-shadow: 0 0 30px rgba(74, 222, 128, 0.3);
+}
+
+.vad-status {
+  font-size: 14px;
+  letter-spacing: 0.2px;
+  color: #444;
+  transition: color 0.15s ease;
+}
+
+.vad-status.speaking {
+  color: #4ade80;
+}
+
+.vad-chat {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.vad-chat-bubble {
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 16px;
+  line-height: 1.5;
+  min-height: 48px;
+}
+
+.vad-agent-bubble {
+  background: #111;
+  border: 1px solid #222;
+  color: #999;
+  transition: opacity 0.2s ease, border-color 0.2s ease;
+}
+
+.vad-agent-bubble.interrupted {
+  opacity: 0.7;
+}
+
+.vad-user-bubble {
+  background: #111;
+  border: 1px solid #222;
+  color: #ccc;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.vad-user-bubble.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.vad-chat-role {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.2px;
+  color: #555;
+  margin-bottom: 4px;
+}
+
+.vad-chat-text .cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: #666;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: blink 0.8s step-end infinite;
+}
+
+/* ── Slide 6: Speculative EOT ── */
+
+.eot-demo {
+  width: 100%;
+  max-width: 900px;
+}
+
+.eot-section {
+  margin-bottom: 20px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.eot-section.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.eot-transcript {
+  font-size: 18px;
+  color: #ccc;
+  padding: 14px 20px;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 8px;
+  min-height: 50px;
+}
+
+.eot-transcript .cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: #888;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: blink 0.8s step-end infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+.eot-label {
+  font-size: 12px;
+  color: #555;
+  letter-spacing: 0.2px;
+  margin-bottom: 6px;
+}
+
+.eot-label.warn {
+  color: #818CF8;
+}
+
+.eot-response {
+  font-size: 17px;
+  color: #999;
+  padding: 14px 20px;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 8px;
+  min-height: 50px;
+  position: relative;
+}
+
+.eot-response.struck {
+  text-decoration: line-through;
+  color: #444;
+  border-color: #1a1a1a;
+  background: #0d0d0d;
+}
+
+.eot-response .cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: #888;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: blink 0.8s step-end infinite;
+}
+
+.eot-teardown-badge {
+  display: inline-block;
+  font-size: 10px;
+  color: #f87171;
+  letter-spacing: 0.2px;
+  margin-left: 12px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.eot-teardown-badge.visible { opacity: 1; }
+
+.eot-pause-indicator {
+  display: inline-block;
+  font-size: 10px;
+  color: #818CF8;
+  margin-left: 8px;
+}
+
+/* ── Slide 7: Links ── */
+
+.links-slide {
+  width: 100%;
+  max-width: 980px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 30px;
+  margin: 0 auto;
+  transform: translateY(-28px);
+}
+
+.links-slide .link-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.links-slide .link-label {
+  font-size: 13px;
+  color: #616161;
+  letter-spacing: 0.2px;
+}
+
+.links-slide a {
+  display: inline-block;
+  color: #d4d4d4;
+  text-decoration: none;
+  font-size: 30px;
+  line-height: 1.25;
+  border-bottom: 1px solid #2a2a2a;
+  padding: 0 0 8px;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.links-slide a:hover,
+.links-slide a:focus {
+  color: #fff;
+  border-color: #666;
+}
+
+.links-slide .link-protocol {
+  color: #525252;
+}
+
+.links-slide .link-body {
+  color: inherit;
+}
+
+  </style>
+</head>
+<body>
+  <div class="progress" id="progress"></div>
+  <div class="slide-counter" id="slide-counter"></div>
+
+  <div class="slides-container">
+
+    <!-- Slide 1: Pipeline -->
+    <div class="slide active" id="slide-1">
+      <div class="gantt-demo" id="gantt-demo">
+        <div class="gantt-chart" id="gantt-chart-demo"></div>
+        <div class="gantt-stats" id="gantt-stats-demo"></div>
+      </div>
+    </div>
+
+    <!-- Slide 2: Silence Trim -->
+    <div class="slide" id="slide-2">
+      <div class="waveform-container">
+        <div class="waveform-label" id="wf-label">TTS Response Audio</div>
+        <canvas class="waveform-canvas" id="wf-canvas"></canvas>
+      </div>
+    </div>
+
+    <!-- Slide 3: Edge -->
+    <div class="slide" id="slide-3">
+      <div class="edge-map" id="edge-map"></div>
+    </div>
+
+    <!-- Slide 4: Background Agent -->
+    <div class="slide" id="slide-4">
+      <div class="bg-agent-demo" id="bg-agent-demo">
+        <div class="bg-agent-section" id="bg-main-section">
+          <div class="bg-agent-label">Main Agent &rarr; User</div>
+          <div class="bg-agent-speech">"I'll get that booked for you"</div>
+        </div>
+        <div class="bg-agent-section" id="bg-tools-section">
+          <div class="bg-agent-label">Background Agent (parallel)</div>
+          <div class="bg-agent-tools" id="bg-tools-list">
+            <div class="bg-tool-line" data-step="0"><span class="fn">check_availability()</span><span class="arrow">&rarr;</span><span class="result">{slots: [{time: "7pm", capacity: 4}, {time: "8pm", capacity: 2}, ...]}</span></div>
+            <div class="bg-tool-line" data-step="1"><span class="fn">create_reservation()</span><span class="arrow">&rarr;</span><span class="result">{id: "R-4521", table: 7, time: "19:00", guests: 2, status: "confirmed"}</span></div>
+            <div class="bg-tool-line" data-step="2"><span class="fn">send_confirmation()</span><span class="arrow">&rarr;</span><span class="result">{sent: true, method: "sms", to: "+44...", templateId: "booking-conf-v2"}</span></div>
+          </div>
+          <div class="bg-agent-token-count" id="bg-token-count">~620 tokens of context</div>
+        </div>
+        <div class="bg-agent-section" id="bg-compressed-section">
+          <div class="bg-agent-label">Injected into main agent context</div>
+          <div class="bg-agent-compressed">"booked: table for 2, 7pm, conf #4521"</div>
+          <div class="bg-agent-compressed-count" id="bg-compressed-count">+9 tokens</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 5: Barge-in / VAD -->
+    <div class="slide" id="slide-5">
+      <div class="vad-demo">
+        <div class="vad-indicator">
+          <div class="vad-dot" id="vad-dot"></div>
+          <div class="vad-status" id="vad-status">silence</div>
+          <canvas id="vad-waveform" width="500" height="80" style="width:500px;height:80px;margin-top:8px;border-radius:6px;"></canvas>
+        </div>
+        <div class="vad-chat" id="vad-chat">
+          <div class="vad-chat-bubble vad-agent-bubble" id="vad-agent-bubble">
+            <span class="vad-chat-role">Agent</span>
+            <span class="vad-chat-text" id="vad-agent-text"></span>
+          </div>
+          <div class="vad-chat-bubble vad-user-bubble" id="vad-user-bubble">
+            <span class="vad-chat-role">You</span>
+            <span class="vad-chat-text" id="vad-user-text">Actually, can you check for Saturday instead?</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 6: Speculative EOT -->
+    <div class="slide" id="slide-6">
+      <div class="eot-demo" id="eot-demo">
+        <div class="eot-section" id="eot-user-1">
+          <div class="eot-label">User</div>
+          <div class="eot-transcript" id="eot-transcript-1"></div>
+        </div>
+        <div class="eot-section" id="eot-spec-response">
+          <div class="eot-label warn">Speculative Response <span class="eot-teardown-badge" id="eot-badge-1">aborted</span></div>
+          <div class="eot-response" id="eot-response-1"></div>
+        </div>
+        <div class="eot-section" id="eot-user-2">
+          <div class="eot-label">User (continued)</div>
+          <div class="eot-transcript" id="eot-transcript-2"></div>
+        </div>
+        <div class="eot-section" id="eot-new-response">
+          <div class="eot-label">New Response</div>
+          <div class="eot-response" id="eot-response-2"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 7: Links -->
+    <div class="slide" id="slide-7">
+      <div class="links-slide">
+        <div class="link-row">
+          <div class="link-label">Live demo</div>
+          <a href="https://aa0.dev/voice-agent" target="_blank" rel="noreferrer">
+            <span class="link-protocol">https://</span><span class="link-body">aa0.dev/voice-agent</span>
+          </a>
+        </div>
+        <div class="link-row">
+          <div class="link-label">Source code</div>
+          <a href="https://github.com/Ahmad-A0/iris-voice-agent" target="_blank" rel="noreferrer">
+            <span class="link-protocol">https://</span><span class="link-body">github.com/Ahmad-A0/iris-voice-agent</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+// ── Navigation ──
+
+const slides = document.querySelectorAll('.slide');
+const progress = document.getElementById('progress');
+const counter = document.getElementById('slide-counter');
+let currentSlide = 0;
+let currentStep = 0;
+
+// Each slide's total steps (0-indexed max step)
+const slideSteps = [1, 4, 3, 4, 1, 4, 1];
+
+function goToSlide(index, direction) {
+  if (index < 0 || index >= slides.length) return;
+  slides[currentSlide].classList.remove('active');
+  currentSlide = index;
+  currentStep = 0;
+  slides[currentSlide].classList.add('active');
+  updateProgress();
+  initSlide(currentSlide);
+}
+
+function advance() {
+  if (currentStep < slideSteps[currentSlide] - 1) {
+    currentStep++;
+    stepSlide(currentSlide, currentStep);
+  } else {
+    goToSlide(currentSlide + 1, 1);
+  }
+}
+
+function goBack() {
+  if (currentStep > 0) {
+    currentStep--;
+    stepSlide(currentSlide, currentStep);
+  } else {
+    goToSlide(currentSlide - 1, -1);
+  }
+}
+
+function updateProgress() {
+  const pct = ((currentSlide) / (slides.length - 1)) * 100;
+  progress.style.width = `${pct}%`;
+  counter.textContent = `${currentSlide + 1} / ${slides.length}`;
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); advance(); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); goBack(); }
+});
+
+document.addEventListener('click', (e) => {
+  if (e.clientX > window.innerWidth / 4) advance();
+  else goBack();
+});
+
+updateProgress();
+
+// ── Slide Init / Step Logic ──
+
+function initSlide(index) {
+  if (index === 0) initPipelineSlide();
+  if (index === 1) initWaveformSlide();
+  if (index === 2) initEdgeSlide();
+  if (index === 3) initBackgroundSlide();
+  if (index === 4) initVADSlide();
+  if (index === 5) initEOTSlide();
+}
+
+function stepSlide(index, step) {
+  if (index === 1) stepWaveform(step);
+  if (index === 2) stepEdge(step);
+  if (index === 3) stepBackground(step);
+  if (index === 5) stepEOT(step);
+}
+
+// ── Slide 1: Pipeline (Gantt) ──
+
+function initPipelineSlide() {
+  const chart = document.getElementById('gantt-chart-demo');
+  const stats = document.getElementById('gantt-stats-demo');
+  chart.innerHTML = '';
+  stats.innerHTML = '';
+  stats.classList.remove('visible');
+
+  // Realistic timing data (ms relative to EOT=0)
+  const marks = {
+    eagerEot: -6,
+    llmStart: -6,
+    firstText: 38,
+    llmDone: 310,
+    firstChunkToTts: 42,
+    firstAudio: 150,
+    ttsDone: 480,
+    audioStartSent: 150,
+    playbackStart: 195,
+    playbackEnd: 760
+  };
+
+  const paddedMin = Math.min(marks.eagerEot - 20, -40);
+  const paddedMax = 840;
+  const range = paddedMax - paddedMin;
+  const toP = (ms) => ((ms - paddedMin) / range) * 100;
+
+  // Spec shade
+  const shade = document.createElement('div');
+  shade.className = 'gantt-spec-shade';
+  shade.style.left = `${toP(marks.eagerEot)}%`;
+  shade.style.width = `${toP(0) - toP(marks.eagerEot)}%`;
+  chart.appendChild(shade);
+
+  // Markers
+  function addMarker(cls, ms, label) {
+    const m = document.createElement('div');
+    m.className = `gantt-marker ${cls}`;
+    m.style.left = `${toP(ms)}%`;
+    const l = document.createElement('span');
+    l.className = 'gantt-marker-label';
+    l.textContent = label;
+    m.appendChild(l);
+    chart.appendChild(m);
+  }
+
+  addMarker('marker-eot', 0, 'EOT 0ms');
+  addMarker('marker-eager-eot', marks.eagerEot, `Eager ${marks.eagerEot}ms`);
+  addMarker('marker-ttft', marks.firstText, `TTFT +${marks.firstText}ms`);
+  addMarker('marker-audio', marks.firstAudio, `1st audio +${marks.firstAudio}ms`);
+
+  // Lanes
+  function makeBar(cls, startMs, endMs, label) {
+    const el = document.createElement('div');
+    el.className = `gantt-bar ${cls}`;
+    const left = Math.max(0, toP(startMs));
+    const right = Math.min(100, toP(endMs));
+    el.style.left = `${left}%`;
+    el.style.width = `${right - left}%`;
+    el.dataset.tipHtml = `<strong>${label}</strong><br>${Math.round(startMs)}ms → ${Math.round(endMs)}ms<br><span class="gantt-tooltip-dur">${Math.round(endMs - startMs)}ms</span>`;
+    return el;
+  }
+
+  const lanes = [
+    { label: 'Turn Detection', bars: [['confirm-eot', marks.eagerEot, 0, 'EOT confirm']] },
+    { label: 'LLM', bars: [['llm-ttft', marks.llmStart, marks.firstText, 'LLM first token'], ['llm-stream', marks.firstText, marks.llmDone, 'LLM streaming']] },
+    { label: 'TTS', bars: [['tts-buffer', marks.firstText, marks.firstChunkToTts, 'TTS buffer'], ['tts-process', marks.firstChunkToTts, marks.firstAudio, 'TTS first audio'], ['tts-stream', marks.firstAudio, marks.ttsDone, 'TTS streaming']] },
+    { label: 'Playback', bars: [['play-delivery', marks.audioStartSent, marks.playbackStart, 'Audio delivery'], ['play-active', marks.playbackStart, marks.playbackEnd, 'Playback active']] }
+  ];
+
+  const allBars = [];
+  lanes.forEach(lane => {
+    const el = document.createElement('div');
+    el.className = 'gantt-lane';
+    const lbl = document.createElement('span');
+    lbl.className = 'gantt-lane-label';
+    lbl.textContent = lane.label;
+    el.appendChild(lbl);
+    lane.bars.forEach(([cls, s, e, label]) => {
+      if (s != null && e != null && e > s) {
+        const bar = makeBar(cls, s, e, label);
+        el.appendChild(bar);
+        allBars.push(bar);
+      }
+    });
+    chart.appendChild(el);
+  });
+
+  // Animate in
+  setTimeout(() => {
+    shade.classList.add('visible');
+    chart.querySelectorAll('.gantt-marker').forEach(m => m.classList.add('visible'));
+  }, 100);
+
+  allBars.forEach((bar, i) => {
+    setTimeout(() => bar.classList.add('visible'), 200 + i * 80);
+  });
+
+  setTimeout(() => {
+    stats.innerHTML = `<span class="gantt-stat-value">TTFT ${marks.firstText}</span> ms &nbsp;&nbsp; <span class="gantt-stat-value">1st audio ${marks.firstAudio}</span> ms &nbsp;&nbsp; <span class="gantt-stat-value">E2E ${marks.playbackStart}</span> ms &nbsp;&nbsp; <span class="gantt-stat-value">spec ${Math.abs(marks.eagerEot)}</span> ms`;
+    stats.classList.add('visible');
+  }, 200 + allBars.length * 80 + 200);
+}
+
+// ── Cursor-following tooltips for gantt ──
+
+{
+  const tip = document.createElement('div');
+  tip.className = 'gantt-float-tip';
+  if (document.body && typeof document.body.appendChild === 'function') {
+    document.body.appendChild(tip);
+  }
+
+  if (typeof document.addEventListener === 'function') {
+    document.addEventListener('mousemove', (e) => {
+      const target = e.target;
+      const bar = target?.closest?.('.gantt-bar');
+      if (bar && bar.dataset.tipHtml) {
+        tip.innerHTML = bar.dataset.tipHtml;
+        tip.style.whiteSpace = 'nowrap';
+        tip.style.width = '';
+        tip.style.left = `${e.clientX + 14}px`;
+        tip.style.top = `${e.clientY + 14}px`;
+        tip.style.display = 'block';
+        return;
+      }
+
+      tip.style.display = 'none';
+    });
+  }
+}
+
+// ── Slide 2: Waveform / Silence Trim ──
+
+let wfData = null;
+let wfAnimFrame = null;
+
+function generateWaveformData() {
+  // Generate realistic-looking PCM waveform: silence then speech
+  const sampleRate = 800; // visual samples
+  const silenceSamples = 280;
+  const totalSamples = sampleRate;
+  const data = new Float32Array(totalSamples);
+
+  for (let i = 0; i < totalSamples; i++) {
+    if (i < silenceSamples) {
+      // Silence: very low noise
+      data[i] = (Math.random() - 0.5) * 0.03;
+    } else {
+      // Speech: varying amplitude with envelope
+      const t = (i - silenceSamples) / (totalSamples - silenceSamples);
+      const envelope = Math.sin(t * Math.PI) * 0.8 + 0.2;
+      const freq1 = Math.sin(i * 0.15) * 0.3;
+      const freq2 = Math.sin(i * 0.37) * 0.2;
+      const freq3 = Math.sin(i * 0.07) * 0.4;
+      const noise = (Math.random() - 0.5) * 0.15;
+      data[i] = (freq1 + freq2 + freq3 + noise) * envelope * (0.5 + Math.random() * 0.5);
+      data[i] = Math.max(-1, Math.min(1, data[i]));
+    }
+  }
+  return { data, silenceSamples, totalSamples };
+}
+
+function initWaveformSlide() {
+  wfData = generateWaveformData();
+  const label = document.getElementById('wf-label');
+  label.classList.add('visible');
+  label.textContent = 'TTS Response Audio';
+  drawWaveform(0); // step 0: full waveform with silence highlighted
+}
+
+function stepWaveform(step) {
+  const label = document.getElementById('wf-label');
+  if (step === 0) {
+    label.textContent = 'TTS Response Audio';
+    drawWaveform(0);
+  } else if (step === 1) {
+    label.textContent = 'Split into chunks';
+    drawWaveform(1);
+  } else if (step === 2) {
+    label.textContent = 'Drop silent chunks';
+    drawWaveform(2);
+  } else if (step === 3) {
+    label.textContent = 'Audio at client — no leading silence';
+    drawWaveform(3);
+  }
+}
+
+function drawWaveform(step) {
+  const canvas = document.getElementById('wf-canvas');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+  const W = rect.width;
+  const H = rect.height;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Clean up any falling chunk overlays from step 2
+  canvas.parentElement.querySelectorAll('.falling-chunk').forEach(el => el.remove());
+
+  if (!wfData) return;
+  const { data, silenceSamples, totalSamples } = wfData;
+  const numChunks = 8;
+  const chunkSize = Math.floor(totalSamples / numChunks);
+
+  // How many chunks are fully silent
+  const silentChunkCount = Math.ceil(silenceSamples / chunkSize);
+
+  if (step === 0) {
+    // Full waveform, silence region shaded
+    const silenceEnd = (silenceSamples / totalSamples) * W;
+    ctx.fillStyle = 'rgba(248, 113, 113, 0.08)';
+    ctx.fillRect(0, 0, silenceEnd, H);
+
+    // Silence label
+    ctx.fillStyle = '#f87171';
+    ctx.font = '13px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText('silence', silenceEnd / 2, H - 16);
+
+    // Draw waveform
+    drawWaveformBars(ctx, data, 0, totalSamples, 0, W, H, '#4ade80', '#f87171', silenceSamples);
+  } else if (step === 1) {
+    // Split into chunks with gaps
+    const gap = 10;
+    const chunkW = (W - gap * (numChunks - 1)) / numChunks;
+    for (let c = 0; c < numChunks; c++) {
+      const x = c * (chunkW + gap);
+      const start = c * chunkSize;
+      const end = Math.min(start + chunkSize, totalSamples);
+      const isSilent = end <= silenceSamples;
+
+      ctx.fillStyle = isSilent ? 'rgba(248, 113, 113, 0.06)' : 'rgba(74, 222, 128, 0.04)';
+      ctx.fillRect(x, 0, chunkW, H);
+      ctx.strokeStyle = isSilent ? '#4a2a2a' : '#2a4a3a';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(x, 0, chunkW, H);
+
+      const color = isSilent ? '#f87171' : '#4ade80';
+      drawWaveformBars(ctx, data, start, end, x, x + chunkW, H, color, color, -1);
+    }
+  } else if (step === 2) {
+    // Draw all chunks first (like step 1), then animate silent ones falling via overlay canvases
+    const gap = 10;
+    const chunkW = (W - gap * (numChunks - 1)) / numChunks;
+    const container = canvas.parentElement;
+
+    // Remove any previous falling overlays
+    container.querySelectorAll('.falling-chunk').forEach(el => el.remove());
+
+    // Draw only speech chunks on main canvas
+    for (let c = 0; c < numChunks; c++) {
+      const x = c * (chunkW + gap);
+      const start = c * chunkSize;
+      const end = Math.min(start + chunkSize, totalSamples);
+      const isSilent = end <= silenceSamples;
+
+      if (!isSilent) {
+        ctx.fillStyle = 'rgba(74, 222, 128, 0.04)';
+        ctx.fillRect(x, 0, chunkW, H);
+        ctx.strokeStyle = '#2a4a3a';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(x, 0, chunkW, H);
+        drawWaveformBars(ctx, data, start, end, x, x + chunkW, H, '#4ade80', '#4ade80', -1);
+      }
+    }
+
+    // Create overlay canvases for silent chunks and animate them falling
+    for (let c = 0; c < numChunks; c++) {
+      const x = c * (chunkW + gap);
+      const start = c * chunkSize;
+      const end = Math.min(start + chunkSize, totalSamples);
+      const isSilent = end <= silenceSamples;
+      if (!isSilent) continue;
+
+      const overlay = document.createElement('canvas');
+      overlay.className = 'falling-chunk';
+      overlay.style.cssText = `position:absolute;left:${(x / W) * 100}%;top:0;width:${(chunkW / W) * 100}%;height:100%;pointer-events:none;transition:transform 0.7s cubic-bezier(.4,0,1,1),opacity 0.7s ease;transform:translateY(0) rotate(0deg);opacity:1;`;
+      const dpr = window.devicePixelRatio || 1;
+      overlay.width = chunkW * dpr;
+      overlay.height = H * dpr;
+      const octx = overlay.getContext('2d');
+      octx.scale(dpr, dpr);
+      octx.fillStyle = 'rgba(248, 113, 113, 0.06)';
+      octx.fillRect(0, 0, chunkW, H);
+      octx.setLineDash([4, 3]);
+      octx.strokeStyle = '#f87171';
+      octx.lineWidth = 1.5;
+      octx.strokeRect(0, 0, chunkW, H);
+      octx.setLineDash([]);
+      drawWaveformBars(octx, data, start, end, 0, chunkW, H, '#f87171', '#f87171', -1);
+
+      container.appendChild(overlay);
+
+      // Trigger fall animation staggered
+      setTimeout(() => {
+        overlay.style.transform = `translateY(120%) rotate(${3 + c * 2}deg)`;
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.remove(), 800);
+      }, c * 120 + 50);
+    }
+  } else if (step === 3) {
+    // Reconstructed without silence — speech chunks packed together
+    const speechStart = silenceSamples;
+    const speechData = data.slice(speechStart);
+    drawWaveformBars(ctx, speechData, 0, speechData.length, 0, W, H, '#4ade80', '#4ade80', -1);
+  }
+}
+
+function drawWaveformBars(ctx, data, startIdx, endIdx, xStart, xEnd, H, colorPos, colorNeg, silenceThreshold) {
+  const count = endIdx - startIdx;
+  const w = xEnd - xStart;
+  const barWidth = Math.max(1, w / count - 0.5);
+  const mid = H / 2;
+
+  for (let i = 0; i < count; i++) {
+    const val = data[startIdx + i];
+    const x = xStart + (i / count) * w;
+    const barH = Math.abs(val) * mid * 0.85;
+
+    if (silenceThreshold >= 0 && (startIdx + i) < silenceThreshold) {
+      ctx.fillStyle = colorNeg;
+    } else {
+      ctx.fillStyle = colorPos;
+    }
+
+    ctx.globalAlpha = 0.8;
+    ctx.fillRect(x, mid - barH, barWidth, barH * 2);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ── Slide 3: Edge Map ──
+
+function initEdgeSlide() {
+  const container = document.getElementById('edge-map');
+  container.innerHTML = `
+    <svg viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg">
+      <!-- Continents (real world-110m data) -->
+        <path class="continent" d="M594,253L605,260L608,268L609,271L610,275L610,280L604,282L598,282L594,277L589,275L585,273L582,267L583,262L585,259L585,257L584,253L594,253Z"/>
+        <path class="continent" d="M476,173L476,174L467,178L464,185L464,191L453,192L453,191L459,189L461,184L467,178L468,175L472,175L474,175L476,173L476,173Z"/>
+        <path class="continent" d="M159,114L144,106L137,98L130,88L118,86L108,67L123,57L141,56L154,55L167,57L180,61L201,61L207,60L227,62L235,61L232,52L243,56L255,61L266,56L274,62L261,67L248,73L237,83L248,91L264,96L274,105L278,98L285,89L285,76L301,79L310,87L323,85L335,97L345,102L333,110L313,112L309,116L320,119L332,121L318,129L314,125L308,118L302,124L288,128L280,129L274,133L269,133L271,124L266,121L265,120L255,116L243,115L236,113L203,114L167,114L159,114Z"/>
+        <path class="continent" d="M255,43L243,42L242,39L233,38L231,36L240,37L248,38L250,39L256,40L264,40L275,40L278,42L272,43L261,43L255,43Z"/>
+        <path class="continent" d="M346,107L342,112L346,111L347,113L351,113L353,115L354,118L351,121L350,118L346,120L346,118L341,118L335,117L335,115L341,109L345,107L346,107Z"/>
+        <path class="continent" d="M267,69L273,71L276,72L275,74L269,72L262,75L258,73L260,70L263,68L265,68L267,69Z"/>
+        <path class="continent" d="M281,49L294,51L302,53L314,58L320,62L327,66L315,66L314,69L320,74L309,73L316,78L299,74L292,70L282,71L295,68L298,63L292,60L285,56L279,56L258,55L254,52L252,47L260,47L271,45L281,49Z"/>
+        <path class="continent" d="M201,39L206,39L205,42L188,43L184,42L177,42L177,38L187,38L197,40L196,37L199,38L201,39Z"/>
+        <path class="continent" d="M204,47L210,53L219,57L215,59L202,58L185,60L177,58L180,55L182,54L171,53L168,51L180,46L188,47L197,48L199,47L204,47Z"/>
+        <path class="continent" d="M233,26L238,25L243,24L252,26L258,29L258,30L248,33L239,31L241,30L233,29L233,26Z"/>
+        <path class="continent" d="M246,23L258,21L269,21L280,19L298,19L317,19L328,21L312,24L307,26L295,29L288,31L284,34L279,36L276,38L257,38L256,36L264,35L258,31L260,29L268,28L257,26L246,23L246,23Z"/>
+        <path class="continent" d="M159,114L194,114L236,114L240,115L252,117L264,120L266,121L268,123L270,132L271,134L281,130L288,128L301,125L306,120L312,123L305,129L305,134L302,135L299,136L294,138L291,141L291,144L288,141L288,147L285,154L277,160L275,169L277,178L273,178L270,169L262,166L251,166L251,169L241,167L230,173L229,178L222,172L214,170L207,164L197,163L178,159L171,155L165,152L156,142L154,131L154,117L160,118L159,114Z"/>
+        <path class="continent" d="M108,56L116,85L127,86L139,96L129,91L111,85L91,81L82,85L82,80L72,88L60,94L47,98L51,95L62,90L58,88L50,87L43,83L42,76L51,74L52,70L38,70L45,65L43,62L47,57L61,53L77,53L95,55L108,56Z"/>
+        <path class="continent" d="M743,113L731,119L723,131L711,131L700,131L691,137L683,133L670,127L655,135L646,134L641,128L645,124L642,119L633,117L632,110L651,108L666,109L669,104L682,98L701,99L713,100L732,108L741,112L743,113Z"/>
+        <path class="continent" d="M655,135L663,124L672,129L684,131L685,136L691,137L697,133L698,136L699,138L696,138L692,139L687,141L688,147L685,145L676,141L671,135L667,133L658,134L655,135Z"/>
+        <path class="continent" d="M892,257L902,261L905,264L910,267L908,269L911,272L915,275L917,277L919,279L917,280L914,279L909,276L906,272L900,272L898,275L895,275L892,266L892,257Z"/>
+        <path class="continent" d="M920,266L917,268L914,267L912,265L916,265L917,264L919,265L921,263L923,262L923,264L921,265L920,266Z"/>
+        <path class="continent" d="M892,257L892,275L886,272L882,273L885,270L883,265L875,262L870,261L869,260L867,258L872,257L867,256L864,254L866,252L872,252L873,258L879,256L884,255L889,257L892,257Z"/>
+        <path class="continent" d="M827,239L828,244L831,247L826,250L824,254L823,261L819,261L816,260L811,260L808,258L806,254L803,251L803,246L805,246L809,247L812,246L816,247L820,242L822,238L827,239Z"/>
+        <path class="continent" d="M841,248L848,246L841,249L833,251L843,252L840,254L840,260L841,266L838,263L836,260L834,261L832,265L831,260L831,254L836,246L841,248Z"/>
+        <path class="continent" d="M801,268L807,269L813,269L818,272L818,274L813,273L807,273L802,271L796,270L793,269L798,267L801,268Z"/>
+        <path class="continent" d="M790,253L791,257L795,259L794,266L789,264L784,260L780,256L776,249L774,245L770,241L765,236L766,235L773,238L777,241L782,244L786,248L787,252L790,253Z"/>
+        <path class="continent" d="M340,334L338,344L342,353L327,360L320,363L324,368L315,375L317,384L309,394L299,393L298,386L301,375L300,371L302,358L304,348L306,334L309,324L314,313L325,311L340,320L345,326L351,325L340,334Z"/>
+        <path class="continent" d="M309,396L312,402L313,404L309,404L306,403L299,401L293,397L299,399L304,399L307,396L309,396Z"/>
+        <path class="continent" d="M307,299L311,310L310,318L307,329L306,342L302,354L301,367L302,373L299,383L297,391L310,395L302,400L292,392L290,380L296,367L297,359L300,344L303,327L305,301L307,299Z"/>
+        <path class="continent" d="M581,262L585,273L580,277L582,284L576,284L569,281L563,281L561,275L557,269L553,272L547,270L535,267L535,264L539,263L544,258L549,250L551,242L556,237L563,237L570,236L578,238L583,238L585,246L582,254L581,259L581,262Z"/>
+        <path class="continent" d="M616,255L614,242L617,238L621,236L633,228L636,224L636,219L636,218L638,218L641,217L642,217L642,220L640,224L637,231L633,238L627,244L620,249L616,254L616,255Z"/>
+        <path class="continent" d="M609,263L605,259L594,253L595,249L597,245L596,240L596,237L599,235L600,238L606,240L607,240L610,240L613,238L616,239L614,252L614,256L612,257L611,260L609,263Z"/>
+        <path class="continent" d="M568,227L565,222L562,216L562,212L566,207L581,189L603,195L603,202L601,212L595,220L594,222L591,216L588,221L582,223L575,223L570,221L568,227Z"/>
+        <path class="continent" d="M566,196L563,208L562,212L561,215L563,218L562,220L556,225L553,226L546,229L545,229L542,227L539,223L541,222L542,218L541,213L538,210L543,200L543,192L541,186L566,196Z"/>
+        <path class="continent" d="M301,195L301,198L301,199L299,199L296,199L293,199L296,199L299,198L298,196L297,195L301,195Z"/>
+        <path class="continent" d="M301,200L300,198L301,197L301,195L305,195L306,196L308,197L310,198L308,199L306,199L304,199L303,199L301,201L301,200Z"/>
+        <path class="continent" d="M649,45L655,41L670,38L684,37L691,37L680,40L662,44L654,49L660,54L649,53L643,51L646,49L651,45L649,45Z"/>
+        <path class="continent" d="M897,101L898,106L902,114L896,117L899,122L895,122L894,117L895,112L893,106L896,101L896,99L897,101Z"/>
+        <path class="continent" d="M863,133L864,125L874,118L863,115L852,106L836,102L831,109L819,111L804,113L791,110L778,107L766,111L752,110L738,112L728,109L714,99L698,100L681,99L669,104L666,110L645,106L630,113L635,119L630,126L633,136L626,132L614,129L602,124L609,119L611,116L606,111L597,108L591,105L587,103L588,101L586,96L577,92L578,85L586,77L584,67L582,58L612,61L594,65L601,72L610,71L622,66L628,60L633,64L649,61L667,60L680,58L686,57L692,48L701,53L698,66L708,62L707,54L710,49L721,49L735,45L751,40L775,38L795,35L809,37L806,43L815,46L842,47L858,49L872,52L887,49L936,53L951,57L974,58L996,57L996,66L999,68L989,70L984,66L996,71L999,76L978,81L961,83L950,89L950,98L936,108L935,91L955,80L943,78L920,87L895,86L884,101L891,108L880,125L867,130L863,133Z"/>
+        <path class="continent" d="M593,122L596,122L597,123L597,123L601,124L598,125L593,126L590,124L593,123L593,122Z"/>
+        <path class="continent" d="M542,29L547,28L560,31L551,34L548,37L538,35L537,33L529,29L538,29L542,29Z"/>
+        <path class="continent" d="M586,57L581,56L571,58L562,59L556,58L549,61L542,66L538,72L533,78L532,85L523,88L515,84L524,74L541,62L559,55L573,53L583,55L586,57Z"/>
+        <path class="continent" d="M370,20L425,18L413,22L436,25L455,26L445,31L445,39L443,45L438,49L440,54L427,55L415,61L397,67L386,74L376,83L357,73L350,63L356,57L349,53L347,52L341,42L316,39L315,35L317,29L327,24L353,23L370,22L370,20Z"/>
+        <path class="continent" d="M545,329L551,331L558,322L563,322L570,321L574,317L584,312L588,321L585,323L591,324L587,332L578,341L570,344L560,345L552,346L550,341L547,333L545,329Z"/>
+        <path class="continent" d="M175,160L192,163L205,163L211,169L221,170L227,178L228,186L232,195L240,199L249,195L257,190L257,195L255,199L252,201L247,203L245,205L241,207L232,207L220,202L211,198L207,192L205,187L196,178L191,172L186,164L181,163L185,170L188,174L192,181L196,186L190,182L185,176L181,173L179,168L175,160Z"/>
+        <path class="continent" d="M340,334L345,336L348,337L352,341L352,344L347,347L344,347L339,346L338,342L338,339L340,334Z"/>
+        <path class="continent" d="M352,344L346,336L347,327L348,321L347,317L343,311L339,305L338,298L333,292L329,287L318,282L313,279L305,281L298,276L295,270L298,265L307,254L307,248L311,245L316,248L322,245L321,239L326,239L333,235L334,240L337,246L342,245L345,243L351,243L355,241L361,245L365,253L376,257L397,263L404,270L393,286L391,300L384,312L371,317L365,328L355,340L352,344Z"/>
+        <path class="continent" d="M307,280L311,280L319,277L318,282L326,286L330,287L333,291L333,295L338,298L340,303L338,306L333,304L327,308L322,311L316,311L311,310L308,303L308,296L307,292L309,286L307,280Z"/>
+        <path class="continent" d="M306,262L301,263L297,267L295,270L297,275L299,278L304,281L309,285L308,290L307,294L306,300L301,298L289,291L286,284L279,272L274,267L275,261L276,261L279,262L282,261L290,254L291,250L295,254L301,256L305,258L306,262Z"/>
+        <path class="continent" d="M314,247L306,245L306,248L306,262L302,257L294,253L288,249L281,246L284,243L285,234L285,229L289,224L294,219L301,215L299,219L298,225L299,229L307,233L312,235L313,241L314,247Z"/>
+        <path class="continent" d="M285,226L285,229L283,229L282,227L279,225L277,227L277,229L275,228L273,227L270,227L270,227L270,225L271,223L273,225L275,225L279,223L282,224L285,226Z"/>
+        <path class="continent" d="M271,223L270,225L270,226L270,227L268,227L268,225L267,224L265,223L264,222L264,223L262,222L262,221L261,220L262,219L265,219L266,220L268,220L269,222L271,223Z"/>
+        <path class="continent" d="M268,220L266,219L262,219L260,217L256,214L257,214L259,213L260,212L262,211L263,210L264,209L266,209L268,208L269,209L268,212L268,216L268,218L268,220Z"/>
+        <path class="continent" d="M269,208L267,209L265,209L264,210L262,211L261,211L259,212L258,214L256,213L255,211L253,211L252,209L254,207L256,206L257,206L261,206L263,206L265,206L267,207L269,208Z"/>
+        <path class="continent" d="M252,210L253,211L254,212L256,211L256,213L254,213L252,213L250,212L251,211L251,210L252,210Z"/>
+        <path class="continent" d="M244,210L244,208L245,205L249,204L248,204L246,202L247,201L252,201L252,206L254,206L255,206L252,208L252,209L251,210L251,211L250,212L247,211L244,210Z"/>
+        <path class="continent" d="M252,201L253,200L254,199L255,199L255,200L255,201L255,203L254,205L253,206L252,203L252,201Z"/>
+        <path class="continent" d="M331,236L325,240L321,241L322,246L314,247L313,240L313,233L305,231L299,229L296,225L300,218L301,221L302,222L307,218L316,220L325,220L331,224L332,229L329,233L331,236Z"/>
+        <path class="continent" d="M343,245L341,245L339,246L337,246L334,245L333,242L335,239L333,237L333,235L329,233L330,231L333,230L332,228L336,228L338,231L340,232L341,236L339,237L340,241L341,242L343,245Z"/>
+        <path class="continent" d="M349,244L346,243L344,244L344,245L341,242L340,241L339,237L341,236L345,234L347,233L349,236L350,240L349,242L349,244Z"/>
+        <path class="continent" d="M357,238L354,243L352,244L351,243L349,244L349,241L349,238L350,234L353,235L357,238Z"/>
+        <path class="continent" d="M517,113L521,116L519,118L517,121L519,123L519,127L518,130L508,132L501,132L496,128L492,118L491,114L497,113L507,108L510,110L516,112L517,113Z"/>
+        <path class="continent" d="M291,250L290,254L284,258L282,263L279,262L277,262L277,261L278,257L277,257L276,255L276,253L278,249L279,247L284,248L285,249L288,249L291,250Z"/>
+        <path class="continent" d="M271,186L279,187L283,188L288,191L292,193L292,195L284,195L283,192L280,190L273,188L270,187L267,189L265,188L269,186L271,186Z"/>
+        <path class="continent" d="M587,312L584,312L582,311L578,310L577,307L573,304L571,301L573,300L575,300L579,296L580,295L584,293L587,294L588,295L591,296L591,302L591,305L590,307L587,312Z"/>
+        <path class="continent" d="M582,311L575,315L574,318L572,320L570,321L566,321L563,321L561,323L558,325L558,322L555,319L558,311L560,301L565,301L568,300L570,299L572,302L576,307L577,308L580,310L582,311Z"/>
+        <path class="continent" d="M555,319L551,331L548,329L543,327L541,321L540,311L536,305L533,298L537,297L551,298L564,299L570,299L567,300L560,301L555,311L555,319Z"/>
+        <path class="continent" d="M454,212L452,209L455,204L460,204L464,207L467,213L468,215L466,216L462,215L455,215L456,214L458,212L462,212L459,212L457,212L454,212Z"/>
+        <path class="continent" d="M468,215L467,213L467,209L470,208L473,207L485,205L486,181L506,194L509,197L510,205L504,207L499,209L494,210L491,212L488,213L486,218L484,222L482,221L479,222L477,221L476,220L476,217L474,216L472,217L469,216L468,215Z"/>
+        <path class="continent" d="M453,192L464,191L464,185L467,178L476,174L482,181L485,205L485,207L473,208L470,208L468,207L466,209L463,205L460,204L457,205L454,205L455,202L455,197L455,194L453,192Z"/>
+        <path class="continent" d="M507,233L504,231L504,224L503,222L502,219L504,218L506,217L508,216L510,219L510,221L509,224L508,226L507,233Z"/>
+        <path class="continent" d="M541,186L543,192L543,200L538,210L541,213L539,215L536,212L531,213L526,214L520,214L515,211L511,214L508,216L506,215L501,211L503,208L510,207L512,197L533,185L541,186Z"/>
+        <path class="continent" d="M507,233L508,225L510,221L510,218L511,212L518,213L522,213L528,213L532,213L537,212L540,216L538,220L536,224L534,228L531,232L526,232L524,237L519,238L514,234L507,233Z"/>
+        <path class="continent" d="M540,214L541,220L541,222L540,225L543,229L540,233L540,237L543,241L544,244L540,244L534,244L527,244L525,239L524,237L526,232L531,232L534,228L536,224L538,220L540,216L540,214Z"/>
+        <path class="continent" d="M502,219L503,222L504,224L504,231L503,234L502,231L502,227L501,224L500,220L502,219Z"/>
+        <path class="continent" d="M500,219L501,222L501,226L501,229L502,233L499,235L495,237L492,235L492,229L492,223L492,220L498,220L500,219Z"/>
+        <path class="continent" d="M478,222L481,222L483,221L485,221L488,223L492,223L491,233L491,236L484,236L479,238L479,234L476,232L477,229L477,227L478,224L478,222Z"/>
+        <path class="continent" d="M462,215L466,216L468,215L469,216L472,217L474,216L476,217L476,220L477,221L477,223L477,227L477,229L475,230L474,228L472,227L470,225L469,222L465,223L463,225L460,222L459,220L460,218L462,217L462,215Z"/>
+        <path class="continent" d="M454,216L456,215L462,215L462,216L461,218L460,218L458,219L455,218L455,217L454,216Z"/>
+        <path class="continent" d="M477,229L477,231L477,233L479,234L479,236L478,238L472,234L468,231L469,229L472,227L473,226L474,229L475,230L477,229Z"/>
+        <path class="continent" d="M463,225L465,223L466,223L469,222L470,224L471,226L472,227L469,229L468,231L465,230L464,227L463,225Z"/>
+        <path class="continent" d="M485,221L486,218L488,215L489,213L491,212L494,210L497,208L499,209L501,210L503,213L506,215L505,218L503,219L500,219L498,220L492,220L492,223L489,223L487,223L485,221Z"/>
+        <path class="continent" d="M576,235L571,235L569,236L563,237L560,238L554,236L551,240L546,241L544,242L542,238L540,235L542,229L546,229L551,227L553,225L560,221L564,220L565,224L568,227L572,231L576,235L576,235Z"/>
+        <path class="continent" d="M551,240L550,245L549,250L547,253L544,260L541,264L538,262L535,262L531,261L533,257L536,257L540,254L540,247L536,245L542,245L546,241L551,240Z"/>
+        <path class="continent" d="M531,244L534,244L536,244L537,246L540,247L540,252L540,256L536,257L535,257L532,258L531,261L526,256L525,252L526,249L527,247L531,244Z"/>
+        <path class="continent" d="M585,273L589,275L593,279L593,285L592,289L582,293L579,296L574,300L570,299L567,298L561,295L566,285L567,281L568,281L572,283L576,284L580,287L582,284L579,280L580,274L585,273Z"/>
+        <path class="continent" d="M591,276L594,277L596,282L596,288L598,289L599,294L597,297L595,293L596,291L594,290L591,288L593,285L593,280L592,277L591,276Z"/>
+        <path class="continent" d="M596,282L602,282L607,281L612,280L613,289L611,295L604,299L598,304L598,309L599,311L599,316L595,319L591,323L589,324L588,321L587,312L591,306L591,302L590,296L587,294L584,291L595,290L595,293L598,295L598,289L595,284L596,282Z"/>
+        <path class="continent" d="M534,267L537,266L547,270L550,272L553,271L556,269L560,270L561,275L562,281L565,280L566,283L567,286L563,297L553,299L539,298L534,298L533,294L535,288L538,283L537,279L536,275L535,269L534,267Z"/>
+        <path class="continent" d="M599,159L598,160L598,162L597,163L598,164L597,167L596,162L597,161L597,158L599,158L600,158L599,159L599,159Z"/>
+        <path class="continent" d="M638,285L639,291L639,294L639,296L637,300L633,312L629,320L622,319L620,313L622,309L624,304L622,298L625,295L629,294L633,289L636,286L638,285Z"/>
+        <path class="continent" d="M526,166L523,160L521,157L523,154L523,149L526,146L528,148L531,147L529,150L530,153L529,156L531,158L532,160L530,162L528,164L526,166Z"/>
+        <path class="continent" d="M476,174L476,170L485,167L490,162L496,160L495,156L497,151L504,148L515,148L521,148L523,151L521,157L525,161L527,170L527,175L528,180L530,182L524,190L509,197L506,194L486,181L476,174Z"/>
+        <path class="continent" d="M599,160L602,160L609,161L603,162L605,166L602,167L600,169L597,168L598,163L599,160Z"/>
+        <path class="continent" d="M643,183L644,183L648,183L652,181L656,178L657,181L655,183L654,184L653,186L653,188L643,183L643,183Z"/>
+        <path class="continent" d="M609,161L614,154L615,149L618,147L622,147L624,147L628,151L627,153L628,158L633,162L633,164L635,167L631,167L624,169L612,161L609,161Z"/>
+        <path class="continent" d="M653,187L654,184L655,181L659,184L664,186L666,188L664,191L661,194L660,197L657,200L654,201L651,203L647,202L655,189L653,187Z"/>
+        <path class="continent" d="M792,210L784,213L780,215L778,216L776,224L779,229L784,233L781,233L777,231L774,227L773,225L777,217L775,212L774,207L772,201L773,195L778,193L781,196L784,200L787,199L791,204L792,210Z"/>
+        <path class="continent" d="M798,211L795,211L793,209L791,204L789,199L786,200L784,200L781,199L779,196L778,193L781,190L783,191L784,188L787,192L791,195L789,196L794,201L798,206L798,211Z"/>
+        <path class="continent" d="M778,193L773,195L772,201L774,207L775,212L777,217L773,220L774,214L771,205L765,206L763,202L760,195L756,190L759,188L759,183L763,180L768,174L771,173L773,173L774,178L774,183L776,189L781,189L778,193Z"/>
+        <path class="continent" d="M790,221L794,218L798,211L796,204L789,196L790,192L784,188L790,187L796,187L800,190L794,197L801,205L803,218L796,224L792,222L790,221Z"/>
+        <path class="continent" d="M863,132L861,133L859,137L855,139L854,141L856,143L852,145L849,145L848,145L847,143L848,141L845,139L852,134L856,133L863,132Z"/>
+        <path class="continent" d="M850,145L852,145L855,144L857,143L860,148L859,153L854,154L851,153L850,148L850,145Z"/>
+        <path class="continent" d="M744,113L756,109L763,111L773,110L778,107L784,110L794,110L801,113L810,113L819,111L823,114L823,117L830,117L830,120L822,123L812,125L810,128L807,131L795,133L787,134L776,132L766,130L760,125L752,123L747,116L744,113Z"/>
+        <path class="continent" d="M770,171L764,176L759,183L756,184L755,183L750,178L745,181L747,189L740,194L728,204L723,212L719,223L713,225L707,211L702,193L693,188L697,180L699,172L709,160L710,154L720,158L725,166L731,174L745,177L747,174L756,175L763,169L770,171Z"/>
+        <path class="continent" d="M757,189L756,190L756,191L755,188L751,187L751,189L749,189L747,189L746,184L745,182L747,180L746,177L750,178L752,180L757,181L754,183L755,186L756,184L757,189Z"/>
+        <path class="continent" d="M745,173L745,176L742,177L737,176L731,174L725,171L724,167L726,165L731,168L734,170L738,172L745,173Z"/>
+        <path class="continent" d="M716,151L706,153L707,159L707,164L699,172L695,176L697,182L687,183L679,180L672,177L674,174L670,169L677,168L681,168L686,163L690,162L692,160L694,156L698,154L698,150L706,148L711,148L716,151Z"/>
+        <path class="continent" d="M685,146L689,147L693,146L695,144L698,145L700,148L703,146L709,147L703,148L699,151L698,155L695,157L693,161L688,162L684,165L679,168L674,169L671,163L668,158L669,154L675,152L679,149L683,145L685,146Z"/>
+        <path class="continent" d="M688,147L687,141L692,139L696,138L696,139L696,140L705,143L708,144L703,146L700,148L698,145L695,144L693,146L689,147L688,147Z"/>
+        <path class="continent" d="M697,133L700,131L705,130L710,131L716,131L721,132L723,133L717,136L713,138L708,138L705,140L699,141L693,140L696,139L699,138L700,135L696,135L697,133Z"/>
+        <path class="continent" d="M646,134L652,133L659,135L663,131L668,135L673,139L681,143L684,146L680,147L676,150L670,151L665,146L657,144L652,146L650,142L646,139L652,136L647,134L646,134Z"/>
+        <path class="continent" d="M635,167L632,164L628,158L628,153L624,147L623,140L626,142L632,140L633,142L637,146L645,148L652,146L657,144L665,146L670,151L669,157L669,162L669,167L674,172L676,176L666,179L658,175L652,176L643,173L638,167L635,167Z"/>
+        <path class="continent" d="M599,159L600,159L600,156L601,154L600,152L601,150L602,148L606,147L610,148L614,147L616,148L615,151L608,157L599,159Z"/>
+        <path class="continent" d="M629,142L627,141L626,140L624,140L621,138L621,136L625,136L626,137L627,139L629,140L629,142Z"/>
+        <path class="continent" d="M531,87L534,83L533,78L535,72L539,71L542,66L547,61L550,60L556,58L561,59L565,66L562,67L559,71L550,76L550,82L550,86L546,92L541,94L536,96L533,90L531,87Z"/>
+        <path class="continent" d="M578,94L583,95L585,98L588,101L590,102L588,103L585,106L581,107L578,107L570,106L565,107L566,104L565,100L572,98L575,95L578,94Z"/>
+        <path class="continent" d="M588,105L596,106L598,110L611,112L608,117L600,120L596,122L588,120L580,124L580,121L583,121L581,117L574,116L568,117L561,115L565,110L568,106L579,107L585,106L588,105Z"/>
+        <path class="continent" d="M565,100L566,104L565,107L565,110L563,114L557,113L553,113L549,111L546,111L543,109L541,105L540,102L545,99L552,99L563,99L565,100Z"/>
+        <path class="continent" d="M547,116L545,117L545,120L542,120L538,121L534,119L531,120L528,120L527,118L527,118L529,118L534,117L536,118L536,116L538,114L541,114L545,115L547,115L547,116Z"/>
+        <path class="continent" d="M561,115L563,117L560,119L556,122L552,122L549,122L546,121L545,120L545,117L547,116L550,117L552,116L555,116L556,116L558,115L561,115Z"/>
+        <path class="continent" d="M574,116L576,115L580,116L581,118L582,120L583,121L583,121L581,121L580,122L579,123L578,122L578,120L576,117L574,116Z"/>
+        <path class="continent" d="M578,124L582,124L580,125L576,127L567,128L563,127L562,126L560,124L556,122L561,118L566,117L570,117L574,116L577,118L578,122L578,124Z"/>
+        <path class="continent" d="M574,96L572,98L568,100L565,99L563,98L562,97L558,94L566,94L569,94L574,96Z"/>
+        <path class="continent" d="M576,90L577,92L575,95L571,94L569,93L562,94L559,92L563,90L567,92L570,89L574,90L576,90Z"/>
+        <path class="continent" d="M539,101L540,104L542,108L539,109L534,110L536,113L536,116L535,118L529,118L527,118L521,118L518,113L517,111L518,106L519,101L523,101L524,97L528,98L533,99L539,101Z"/>
+        <path class="continent" d="M563,127L565,128L571,129L576,127L579,129L577,132L575,133L573,135L568,134L564,135L562,132L562,132L564,130L562,128L563,127Z"/>
+        <path class="continent" d="M564,135L570,135L574,135L571,137L568,139L563,138L565,141L567,144L565,146L562,149L559,144L556,140L558,137L561,136L564,135Z"/>
+        <path class="continent" d="M624,147L619,146L613,147L606,147L602,149L599,149L596,148L588,148L582,150L575,145L573,140L581,136L593,133L607,136L615,135L622,137L624,140L623,145L624,147Z"/>
+        <path class="continent" d="M558,137L557,138L556,140L555,139L554,137L554,134L554,133L555,132L556,132L557,134L557,136L558,137Z"/>
+        <path class="continent" d="M546,121L551,123L554,124L550,125L545,125L545,127L548,129L551,132L544,129L541,126L539,126L538,124L541,124L544,123L546,121Z"/>
+        <path class="continent" d="M527,118L526,119L529,120L528,121L525,122L523,122L520,123L518,121L517,120L519,118L521,118L524,117L527,118Z"/>
+        <path class="continent" d="M475,134L477,133L479,134L481,134L481,136L480,138L479,140L480,143L480,145L479,147L477,147L476,145L474,143L474,141L475,138L476,136L475,134Z"/>
+        <path class="continent" d="M479,147L480,144L479,140L481,138L481,134L478,134L475,134L478,128L488,129L496,130L505,132L506,135L500,139L499,144L494,148L486,149L483,149L479,147Z"/>
+        <path class="continent" d="M991,361L989,365L986,365L987,362L983,360L985,358L985,354L984,351L981,348L981,346L984,348L987,353L988,352L991,355L994,354L995,357L992,359L992,361L991,361Z"/>
+        <path class="continent" d="M971,371L975,368L978,365L980,362L981,365L984,365L983,367L980,370L979,372L976,375L972,379L968,379L963,378L964,375L969,372L971,371Z"/>
+        <path class="continent" d="M850,339L841,344L831,346L824,347L821,342L819,333L817,326L816,322L815,318L817,310L824,308L831,306L838,302L843,298L845,293L850,290L857,291L862,287L868,284L871,283L878,283L878,287L879,293L886,297L892,296L893,288L895,281L898,283L900,290L904,295L907,303L915,309L919,315L925,324L925,334L920,344L917,353L908,357L901,356L891,356L884,349L882,346L879,345L872,341L860,338L850,339Z"/>
+        <path class="continent" d="M723,132L729,124L741,115L751,118L760,125L771,131L790,134L807,131L811,125L824,121L830,117L821,116L831,109L836,102L852,106L863,115L874,118L864,125L861,131L852,134L839,141L838,136L826,142L836,145L835,150L837,160L839,167L832,178L817,188L807,193L800,190L793,185L782,188L779,190L774,183L774,174L768,170L757,173L749,172L738,172L729,166L718,159L716,151L708,144L705,140L714,136L723,132Z"/>
+        <path class="continent" d="M529,120L534,119L538,122L534,124L535,128L542,133L544,135L551,138L549,138L548,140L545,144L544,142L543,139L539,137L534,134L528,128L523,127L521,127L520,124L520,123L524,122L528,121L529,120Z"/>
+        <path class="continent" d="M528,97L524,97L522,93L524,91L527,90L529,91L529,93L530,94L527,96L528,97Z"/>
+        <path class="continent" d="M491,102L490,98L486,97L484,96L484,89L492,87L495,90L494,95L499,99L505,104L504,108L493,110L487,110L488,108L486,107L487,103L491,102Z"/>
+        <path class="continent" d="M460,65L462,69L451,73L445,73L440,71L438,69L432,68L439,66L447,66L455,65L460,65Z"/>
+        <path class="continent" d="M629,134L632,136L633,135L636,135L639,137L638,138L637,142L636,144L633,142L633,140L629,142L628,140L627,138L627,137L625,135L628,136L630,136L629,134Z"/>
+        <path class="continent" d="M611,129L614,129L622,131L624,131L627,133L628,134L629,136L626,135L621,136L615,135L615,132L612,130L611,129Z"/>
+        <path class="continent" d="M851,227L851,230L850,230L849,233L845,233L845,230L842,229L839,231L840,228L843,226L846,226L849,225L851,224L851,227Z"/>
+        <path class="continent" d="M840,199L840,203L838,206L838,210L841,210L844,213L845,215L841,212L839,212L835,212L836,210L835,210L833,207L834,205L835,199L839,199L840,199Z"/>
+        <path class="continent" d="M778,232L781,233L783,234L784,233L787,237L787,240L788,242L790,245L788,247L782,242L780,239L778,235L778,232Z"/>
+        <path class="continent" d="M827,239L822,238L820,242L816,247L812,246L809,247L805,246L807,245L809,243L814,241L817,237L819,238L821,236L823,233L825,231L827,233L831,235L829,236L827,239Z"/>
+        <path class="continent" d="M538,121L542,120L545,120L546,121L544,123L543,124L541,123L538,124L538,122L538,121Z"/>
+        <path class="continent" d="M579,58L583,62L584,67L585,72L588,75L584,78L573,82L564,84L559,81L558,76L562,73L571,69L566,67L565,61L557,58L562,59L569,59L573,56L581,56L579,58Z"/>
+        <path class="continent" d="M563,114L561,115L558,115L556,116L555,116L552,116L550,117L547,116L547,115L549,114L550,114L550,113L552,113L553,113L555,113L558,113L563,114Z"/>
+        <path class="continent" d="M542,108L545,109L546,111L549,110L551,111L552,113L550,113L550,114L549,114L547,115L545,115L541,114L538,114L535,112L534,110L537,109L540,108L542,108Z"/>
+        <path class="continent" d="M601,210L602,205L603,202L607,200L609,206L614,210L617,213L620,215L618,215L616,213L614,211L609,210L607,210L604,211L601,210Z"/>
+        <path class="continent" d="M894,141L892,147L891,150L886,154L877,157L875,154L867,156L867,158L863,164L862,160L859,158L864,155L868,152L877,151L882,148L887,144L889,137L893,135L894,141Z"/>
+        <path class="continent" d="M338,306L339,311L343,311L346,313L346,317L348,316L349,318L348,321L345,326L340,326L340,321L337,319L331,316L327,308L328,305L336,304L338,306Z"/>
+        <path class="continent" d="M644,197L646,204L642,208L634,211L630,213L626,214L624,215L620,213L619,209L619,206L620,204L622,202L626,202L631,203L636,198L644,197Z"/>
+        <path class="continent" d="M597,168L602,167L606,165L609,161L624,169L633,171L637,174L639,177L640,180L642,182L643,183L653,187L644,197L632,202L629,202L622,202L620,203L618,203L616,200L612,194L608,189L606,183L603,180L601,176L596,172L597,168Z"/>
+        <path class="continent" d="M365,467L370,466L378,468L380,471L375,473L366,475L353,475L350,473L358,471L361,469L365,467Z"/>
+        <path class="continent" d="M295,448L300,448L301,445L302,442L306,442L308,445L310,447L310,449L306,451L299,451L297,451L292,450L295,448Z"/>
+        <path class="continent" d="M0,485L11,484L20,484L44,486L87,488L83,484L76,479L71,475L93,473L74,470L60,464L75,465L94,462L99,460L118,458L133,456L152,457L170,456L185,456L198,458L217,459L215,456L218,452L232,454L250,454L263,454L277,453L292,455L309,453L312,448L310,443L312,437L321,432L329,429L339,426L334,428L326,432L321,436L320,441L327,446L331,452L324,457L310,461L290,463L295,466L283,470L302,474L329,478L346,479L375,477L399,475L419,472L401,471L411,466L427,462L444,460L457,456L463,452L475,448L484,447L498,448L511,447L524,445L534,445L547,444L561,446L575,446L589,443L598,442L610,443L623,440L634,437L644,434L657,433L666,437L678,437L691,439L688,445L689,450L700,448L707,444L718,441L728,437L741,437L749,437L762,436L774,436L786,432L798,436L810,434L821,435L836,437L848,435L860,435L874,434L878,435L891,436L906,437L917,440L931,441L944,444L958,447L974,448L972,453L960,458L954,463L963,468L947,471L949,477L969,481L989,484L0,485Z"/>
+        <path class="continent" d="M494,152L496,159L493,161L490,164L483,167L476,173L474,175L471,175L467,178L460,188L453,191L454,188L456,184L459,180L462,176L465,172L471,169L474,161L479,156L484,151L490,152L494,152Z"/>
+        <path class="continent" d="M602,189L569,189L569,167L570,162L579,164L584,163L589,164L594,164L597,168L595,173L592,171L591,170L596,179L599,184L602,189Z"/>
+        <path class="continent" d="M569,189L566,196L541,186L533,185L529,182L526,178L527,173L527,168L528,164L530,161L535,159L542,160L550,165L556,164L558,159L565,161L569,161L569,165L569,179L569,189Z"/>
+        <path class="continent" d="M633,228L619,238L614,239L610,240L607,240L600,238L598,235L595,230L592,227L594,223L597,219L601,212L605,208L609,210L614,212L618,215L616,218L618,219L619,222L630,228L633,228Z"/>
+        <path class="continent" d="M636,218L636,219L636,224L633,228L621,224L619,222L619,220L621,219L623,221L627,220L632,219L634,218L636,218Z"/>
+        <path class="continent" d="M594,253L585,253L583,254L582,252L583,248L585,246L587,244L586,240L589,240L593,239L596,240L597,245L595,249L594,253Z"/>
+        <path class="continent" d="M552,132L548,129L546,128L544,126L545,125L547,124L552,125L554,125L554,128L553,129L552,130L552,132Z"/>
+        <path class="continent" d="M552,122L558,123L560,126L563,126L562,128L563,131L562,132L560,132L560,131L559,130L557,130L556,131L554,130L554,128L553,125L552,122Z"/>
+        <path class="continent" d="M556,132L555,131L554,134L552,133L552,132L553,129L554,130L555,130L556,131L556,132Z"/>
+        <path class="continent" d="M557,134L556,132L556,131L557,130L558,130L559,131L560,131L560,132L560,133L558,133L557,134Z"/>
+        <path class="continent" d="M586,240L581,238L578,238L574,233L570,229L566,226L569,223L572,222L575,223L580,224L582,222L587,223L590,218L591,216L592,220L594,224L594,227L593,229L596,232L594,238L589,240L586,240Z"/>167 paths, 31785 bytes
+
+
+            <!-- Edge nodes — real Cloudflare PoP locations -->
+      <g id="edge-nodes">
+        <circle class="edge-node" cx="171.7" cy="155.3" r="2.5"/>  <!-- Los Angeles -->
+        <circle class="edge-node" cx="231.1" cy="158.9" r="2.5"/>  <!-- Dallas -->
+        <circle class="edge-node" cx="284.7" cy="141.7" r="2.5"/>  <!-- Ashburn VA -->
+        <circle class="edge-node" cx="256.7" cy="133.6" r="2.5"/>  <!-- Chicago -->
+        <circle class="edge-node" cx="277.2" cy="178.3" r="2.5"/>  <!-- Miami -->
+        <circle class="edge-node" cx="279.4" cy="128.6" r="2.5"/>  <!-- Toronto -->
+        <circle class="edge-node" cx="499.7" cy="106.9" r="2.5"/>  <!-- London -->
+        <circle class="edge-node" cx="524.2" cy="110.8" r="2.5"/>  <!-- Frankfurt -->
+        <!-- Amsterdam omitted — falls in outline gap -->
+        <circle class="edge-node" cx="506.4" cy="114.2" r="2.5"/>  <!-- Paris -->
+        <circle class="edge-node" cx="550.3" cy="85.3" r="2.5"/>   <!-- Stockholm -->
+        <circle class="edge-node" cx="702.5" cy="196.9" r="2.5"/>  <!-- Mumbai -->
+        <circle class="edge-node" cx="788.3" cy="246.4" r="2.5"/>  <!-- Singapore -->
+        <circle class="edge-node" cx="888.1" cy="150.8" r="2.5"/>  <!-- Tokyo -->
+        <circle class="edge-node" cx="920" cy="344.2" r="2.5"/>    <!-- Sydney -->
+        <circle class="edge-node" cx="370.6" cy="315.3" r="2.5"/>  <!-- São Paulo -->
+        <circle class="edge-node" cx="380" cy="313.6" r="2.5"/>   <!-- Rio de Janeiro -->
+        <circle class="edge-node" cx="577.8" cy="322.8" r="2.5"/>  <!-- Johannesburg -->
+        <circle class="edge-node" cx="653.6" cy="179.7" r="2.5"/>  <!-- Dubai -->
+        <circle class="edge-node" cx="852.8" cy="145.6" r="2.5"/>  <!-- Seoul -->
+        <circle class="edge-node" cx="817.2" cy="188.1" r="2.5"/>  <!-- Hong Kong -->
+      </g>
+
+      <!-- User nodes — exact geographic coords -->
+      <circle class="user-node" id="node-london" cx="499.7" cy="106.9" r="3"/>
+      <circle class="user-node" id="node-saopaulo" cx="370.6" cy="315.3" r="3"/>
+
+      <!-- Origin node — Ashburn, Virginia -->
+      <circle class="origin-node" id="node-origin" cx="284.7" cy="141.7" r="3"/>
+
+      <!-- Route paths -->
+      <!-- London → London CF edge (same location, tiny offset to be visible) -->
+      <line class="route-path route-edge" id="route-london-edge" x1="499.7" y1="106.9" x2="506.4" y2="114.2"/>
+      <!-- São Paulo → Rio de Janeiro CF edge (nearby, short line) -->
+      <line class="route-path route-edge" id="route-sp-edge" x1="370.6" y1="315.3" x2="380" y2="313.6"/>
+      <!-- London → Ashburn: great circle bows north over Atlantic -->
+      <path class="route-path route-origin" id="route-london-origin" d="M499.7,106.9 Q392,65 284.7,141.7"/>
+      <!-- São Paulo → Ashburn: great circle bows east over Caribbean -->
+      <path class="route-path route-origin" id="route-sp-origin" d="M370.6,315.3 Q340,218 284.7,141.7"/>
+
+      <!-- Labels -->
+      <!-- Labels — font-sizes dynamically scaled by animateViewBox -->
+      <!-- Zoomed London labels (positioned tight to node) -->
+      <text class="map-label" id="label-london" x="497" y="104" text-anchor="end" font-size="10">London</text>
+      <text class="map-label" id="label-edge-london" x="509" y="117" font-size="10">Paris edge</text>
+      <text class="latency-label fast" id="lat-london-edge" x="505" y="110" font-size="10">~10ms</text>
+      <!-- Zoomed SP labels -->
+      <text class="map-label" id="label-sp" x="368" y="319" text-anchor="end" font-size="10">São Paulo</text>
+      <text class="map-label" id="label-edge-sp" x="382" y="312" font-size="10">Rio edge</text>
+      <text class="latency-label fast" id="lat-sp-edge" x="375" y="313" font-size="10">~15ms</text>
+      <!-- Full-map labels -->
+      <text class="map-label" id="label-london-full" x="504" y="104" font-size="10">London</text>
+      <text class="map-label" id="label-sp-full" x="375" y="320" font-size="10">São Paulo</text>
+      <text class="map-label" id="label-origin" x="289" y="150" font-size="10">US-East</text>
+      <text class="latency-label slow" id="lat-london-origin" x="400" y="78" font-size="10">~85ms</text>
+      <text class="latency-label slow" id="lat-sp-origin" x="310" y="230" font-size="10">~120ms</text>
+    </svg>
+  `;
+
+  // Animate viewBox for zooming
+  edgeSvg = container.querySelector('svg');
+  stepEdge(0);
+}
+
+let edgeSvg = null;
+
+function animateViewBox(svg, target, duration) {
+  const current = svg.getAttribute('viewBox').split(' ').map(Number);
+  const start = performance.now();
+  function tick(now) {
+    const t = Math.min((now - start) / duration, 1);
+    const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    const vb = current.map((c, i) => c + (target[i] - c) * ease);
+    svg.setAttribute('viewBox', vb.map(v => Math.round(v * 10) / 10).join(' '));
+    // Scale circles and text relative to zoom level
+    const zoomW = vb[2];
+    const scale = zoomW / 1000; // 1.0 at full map, ~0.1 when zoomed
+    const nodeR = Math.max(0.8, 2.5 * scale);
+    svg.querySelectorAll('.user-node, .origin-node').forEach(c => {
+      c.setAttribute('r', nodeR * 1.2);
+    });
+    svg.querySelectorAll('.edge-node').forEach(c => {
+      c.setAttribute('r', nodeR);
+    });
+    // Scale text — keep consistent apparent size regardless of zoom
+    // At full map (zoomW=1000), fontSize≈10 SVG units. At zoomed (zoomW=80), fontSize≈0.8 SVG units.
+    // Both render at the same apparent pixel size on screen.
+    const fontSize = zoomW * 0.01;
+    svg.querySelectorAll('.map-label').forEach(t => t.setAttribute('font-size', fontSize));
+    svg.querySelectorAll('.latency-label').forEach(t => t.setAttribute('font-size', fontSize * 1.3));
+    if (t < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+function stepEdge(step) {
+  // All elements
+  const els = {
+    london: document.getElementById('node-london'),
+    sp: document.getElementById('node-saopaulo'),
+    origin: document.getElementById('node-origin'),
+    lblLon: document.getElementById('label-london'),
+    lblSp: document.getElementById('label-sp'),
+    lblLonFull: document.getElementById('label-london-full'),
+    lblSpFull: document.getElementById('label-sp-full'),
+    lblOrigin: document.getElementById('label-origin'),
+    lblEdgeLon: document.getElementById('label-edge-london'),
+    lblEdgeSp: document.getElementById('label-edge-sp'),
+    routeLonEdge: document.getElementById('route-london-edge'),
+    routeSpEdge: document.getElementById('route-sp-edge'),
+    routeLonOrigin: document.getElementById('route-london-origin'),
+    routeSpOrigin: document.getElementById('route-sp-origin'),
+    latLonEdge: document.getElementById('lat-london-edge'),
+    latSpEdge: document.getElementById('lat-sp-edge'),
+    latLonOrigin: document.getElementById('lat-london-origin'),
+    latSpOrigin: document.getElementById('lat-sp-origin'),
+  };
+
+  // Reset all
+  Object.values(els).forEach(n => n?.classList.remove('visible'));
+
+  if (step === 0) {
+    // Full map — single origin with long-distance hops
+    animateViewBox(edgeSvg, [0, 0, 1000, 500], 600);
+    els.london?.classList.add('visible');
+    els.sp?.classList.add('visible');
+    els.lblLonFull?.classList.add('visible');
+    els.lblSpFull?.classList.add('visible');
+    els.origin?.classList.add('visible');
+    els.lblOrigin?.classList.add('visible');
+    setTimeout(() => {
+      els.routeLonOrigin?.classList.add('visible');
+      els.routeSpOrigin?.classList.add('visible');
+      els.latLonOrigin?.classList.add('visible');
+      els.latSpOrigin?.classList.add('visible');
+    }, 250);
+  }
+  if (step === 1) {
+    // Zoom to London — compare against a nearby edge route
+    animateViewBox(edgeSvg, [470, 85, 80, 50], 700);
+    els.london?.classList.add('visible');
+    els.lblLon?.classList.add('visible');
+    els.lblEdgeLon?.classList.add('visible');
+    els.routeLonEdge?.classList.add('visible');
+    setTimeout(() => els.latLonEdge?.classList.add('visible'), 400);
+  }
+  if (step === 2) {
+    // Zoom to São Paulo — compare against a nearby edge route
+    animateViewBox(edgeSvg, [340, 290, 80, 50], 700);
+    els.sp?.classList.add('visible');
+    els.lblSp?.classList.add('visible');
+    els.lblEdgeSp?.classList.add('visible');
+    els.routeSpEdge?.classList.add('visible');
+    setTimeout(() => els.latSpEdge?.classList.add('visible'), 400);
+  }
+}
+
+// ── Slide 4: Background Agent ──
+
+function initBackgroundSlide() {
+  document.getElementById('bg-main-section').classList.remove('visible');
+  document.getElementById('bg-tools-section').classList.remove('visible');
+  document.getElementById('bg-compressed-section').classList.remove('visible');
+  document.getElementById('bg-token-count').classList.remove('visible');
+  document.getElementById('bg-compressed-count').classList.remove('visible');
+  document.querySelectorAll('.bg-tool-line').forEach(el => el.classList.remove('visible'));
+  stepBackground(0);
+}
+
+function stepBackground(step) {
+  if (step >= 0) {
+    document.getElementById('bg-main-section').classList.add('visible');
+  }
+  if (step >= 1) {
+    document.getElementById('bg-tools-section').classList.add('visible');
+    document.querySelectorAll('.bg-tool-line').forEach((el, i) => {
+      setTimeout(() => el.classList.add('visible'), i * 150);
+    });
+  }
+  if (step >= 2) {
+    document.getElementById('bg-token-count').classList.add('visible');
+  }
+  if (step >= 3) {
+    document.getElementById('bg-compressed-section').classList.add('visible');
+    setTimeout(() => {
+      document.getElementById('bg-compressed-count').classList.add('visible');
+    }, 300);
+  }
+}
+
+// ── Slide 5: Barge-in / VAD ──
+
+let vadInstance = null;
+let vadStream = null;
+let vadContext = null;
+let vadAnalyser = null;
+let vadAnimFrame = null;
+let vadSilenceTimer = null;
+
+async function initVADSlide() {
+  const dot = document.getElementById('vad-dot');
+  const status = document.getElementById('vad-status');
+  const wfCanvas = document.getElementById('vad-waveform');
+
+  try {
+    // Set up audio context + analyser for waveform
+    vadStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    vadContext = new AudioContext();
+    const source = vadContext.createMediaStreamSource(vadStream);
+    vadAnalyser = vadContext.createAnalyser();
+    vadAnalyser.fftSize = 1024;
+    source.connect(vadAnalyser);
+
+    // Set up real Silero VAD
+    const basePath = '/voice-agent/';
+    let speaking = false;
+
+    if (window.vad && window.vad.MicVAD) {
+      vadInstance = await window.vad.MicVAD.new({
+        audioContext: vadContext,
+        model: 'v5',
+        startOnLoad: true,
+        baseAssetPath: basePath + 'vendor/vad/',
+        onnxWASMBasePath: basePath + 'vendor/ort/',
+        positiveSpeechThreshold: 0.8,
+        minSpeechMs: 100,
+        getStream: async () => vadStream,
+        pauseStream: async () => {},
+        resumeStream: async () => vadStream,
+        onFrameProcessed: (probs) => {
+          const isSpeaking = probs.isSpeech > 0.5;
+          if (isSpeaking && !speaking) {
+            speaking = true;
+            clearTimeout(vadSilenceTimer);
+            vadSilenceTimer = null;
+            dot.classList.add('speaking');
+            status.classList.add('speaking');
+            status.textContent = 'speech';
+            triggerTeardown();
+          } else if (!isSpeaking && speaking && !vadSilenceTimer) {
+            vadSilenceTimer = setTimeout(() => {
+              speaking = false;
+              vadSilenceTimer = null;
+              dot.classList.remove('speaking');
+              status.classList.remove('speaking');
+              status.textContent = 'silence';
+              resetTeardown();
+            }, 500);
+          } else if (isSpeaking && vadSilenceTimer) {
+            clearTimeout(vadSilenceTimer);
+            vadSilenceTimer = null;
+          }
+        },
+      });
+      vadInstance.start();
+    } else {
+      status.textContent = 'vad not loaded';
+    }
+
+    // Start agent typing animation
+    startAgentTyping();
+
+    // Draw live waveform
+    const dataArray = new Uint8Array(vadAnalyser.fftSize);
+    const dpr = window.devicePixelRatio || 1;
+    wfCanvas.width = 500 * dpr;
+    wfCanvas.height = 80 * dpr;
+    const wCtx = wfCanvas.getContext('2d');
+    wCtx.scale(dpr, dpr);
+
+    function drawVadWaveform() {
+      vadAnalyser.getByteTimeDomainData(dataArray);
+      wCtx.clearRect(0, 0, 500, 80);
+
+      wCtx.strokeStyle = speaking ? '#4ade80' : '#333';
+      wCtx.lineWidth = 1.5;
+      wCtx.beginPath();
+      const sliceWidth = 500 / dataArray.length;
+      let x = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        const v = dataArray[i] / 128.0;
+        const y = (v * 80) / 2;
+        if (i === 0) wCtx.moveTo(x, y);
+        else wCtx.lineTo(x, y);
+        x += sliceWidth;
+      }
+      wCtx.stroke();
+      vadAnimFrame = requestAnimationFrame(drawVadWaveform);
+    }
+    drawVadWaveform();
+  } catch (e) {
+    status.textContent = 'mic unavailable';
+  }
+}
+
+const agentMessage = "Sure, I can help you with that. Let me check the availability for your preferred date and time. We have several options available including...";
+let agentTypeIdx = 0;
+let agentTypeTimer = null;
+
+function startAgentTyping() {
+  const text = document.getElementById('vad-agent-text');
+  const bubble = document.getElementById('vad-agent-bubble');
+  bubble.classList.remove('interrupted');
+  agentTypeIdx = 0;
+
+  function tick() {
+    if (agentTypeIdx < agentMessage.length) {
+      text.innerHTML = agentMessage.slice(0, agentTypeIdx + 1) + '<span class="cursor"></span>';
+      agentTypeIdx++;
+      agentTypeTimer = setTimeout(tick, 35 + Math.random() * 25);
+    } else {
+      // Loop — reset and start again
+      agentTypeIdx = 0;
+      agentTypeTimer = setTimeout(tick, 1000);
+    }
+  }
+  tick();
+}
+
+function triggerTeardown() {
+  // Interrupt the agent
+  clearTimeout(agentTypeTimer);
+  const bubble = document.getElementById('vad-agent-bubble');
+  const userBubble = document.getElementById('vad-user-bubble');
+  bubble.classList.add('interrupted');
+  userBubble.classList.add('visible');
+}
+
+function resetTeardown() {
+}
+
+// Cleanup VAD when leaving slide
+function cleanupVAD() {
+  if (vadAnimFrame) cancelAnimationFrame(vadAnimFrame);
+  if (vadSilenceTimer) { clearTimeout(vadSilenceTimer); vadSilenceTimer = null; }
+  if (agentTypeTimer) { clearTimeout(agentTypeTimer); agentTypeTimer = null; }
+  if (vadInstance) { vadInstance.destroy?.(); vadInstance = null; }
+  if (vadContext) vadContext.close();
+  if (vadStream) vadStream.getTracks().forEach(t => t.stop());
+  vadStream = null;
+  vadContext = null;
+  vadAnalyser = null;
+}
+
+// ── Slide 6: Speculative EOT ──
+
+let eotTypeTimer = null;
+
+function initEOTSlide() {
+  clearTimeout(eotTypeTimer);
+  document.querySelectorAll('#eot-demo .eot-section').forEach(s => s.classList.remove('visible'));
+  document.getElementById('eot-transcript-1').innerHTML = '';
+  document.getElementById('eot-response-1').innerHTML = '';
+  document.getElementById('eot-response-1').classList.remove('struck');
+  document.getElementById('eot-transcript-2').innerHTML = '';
+  document.getElementById('eot-response-2').innerHTML = '';
+  document.getElementById('eot-badge-1').classList.remove('visible');
+  stepEOT(0);
+}
+
+function stepEOT(step) {
+  if (step === 0) {
+    // Show user transcript typing
+    const section = document.getElementById('eot-user-1');
+    section.classList.add('visible');
+    typeText('eot-transcript-1', 'Can I book a table for 2 on the 14th...', 40, () => {
+      // Add pause indicator
+      const el = document.getElementById('eot-transcript-1');
+      el.innerHTML += ' <span class="eot-pause-indicator">pause detected</span>';
+    });
+  }
+  if (step === 1) {
+    // Show speculative response streaming
+    const section = document.getElementById('eot-spec-response');
+    section.classList.add('visible');
+    typeText('eot-response-1', 'Sure! I can book a table for 2 on the 14th. Let me check availability for you...', 30);
+  }
+  if (step === 2) {
+    // User continues — strike the speculative response
+    document.getElementById('eot-response-1').classList.add('struck');
+    document.getElementById('eot-badge-1').classList.add('visible');
+
+    const section = document.getElementById('eot-user-2');
+    section.classList.add('visible');
+    typeText('eot-transcript-2', 'Actually make it a table for 4', 40);
+  }
+  if (step === 3) {
+    // New response
+    const section = document.getElementById('eot-new-response');
+    section.classList.add('visible');
+    typeText('eot-response-2', 'No problem! I\'ll book a table for 4 on the 14th instead. Checking what\'s available...', 30);
+  }
+}
+
+function typeText(elementId, text, speed, onDone) {
+  const el = document.getElementById(elementId);
+  el.innerHTML = '<span class="cursor"></span>';
+  let i = 0;
+
+  function tick() {
+    if (i < text.length) {
+      el.innerHTML = text.slice(0, i + 1) + '<span class="cursor"></span>';
+      i++;
+      eotTypeTimer = setTimeout(tick, speed + Math.random() * 20);
+    } else {
+      el.innerHTML = text;
+      if (onDone) onDone();
+    }
+  }
+  tick();
+}
+
+// ── Handle slide transitions (cleanup) ──
+
+const originalGoToSlide = goToSlide;
+goToSlide = function(index, direction) {
+  // Cleanup previous slide
+  if (currentSlide === 4) cleanupVAD();
+  if (currentSlide === 5) clearTimeout(eotTypeTimer);
+
+  originalGoToSlide(index, direction);
+};
+
+// Init first slide
+initSlide(0);
+</script>
+</body>
+</html>

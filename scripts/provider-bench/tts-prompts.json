@@ -1,0 +1,22 @@
+[
+  {
+    "id": "short_ack",
+    "label": "Short acknowledgement",
+    "text": "Okay, I can do that."
+  },
+  {
+    "id": "medium_statement",
+    "label": "Medium statement",
+    "text": "I checked the latest draft and the timeline still looks realistic for next week."
+  },
+  {
+    "id": "pausey_question",
+    "label": "Pausey question",
+    "text": "Before we ship this, should we leave that setting on there, or change it now?"
+  },
+  {
+    "id": "longer_explainer",
+    "label": "Longer explainer",
+    "text": "The reason this matters is that the first few hundred milliseconds of audio decide whether the response sounds natural, and big loudness swings make the experience feel inconsistent even when the text is fine."
+  }
+]

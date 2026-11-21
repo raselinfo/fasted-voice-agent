@@ -1,0 +1,9 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "voice-agent-ttft-probe",
+  "main": "index.js",
+  "compatibility_date": "2026-04-05",
+  "ai": {
+    "binding": "AI"
+  }
+}

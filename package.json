@@ -1,0 +1,38 @@
+{
+  "name": "voice-agent",
+  "description": "Browser-first realtime voice demo on Cloudflare Workers with a Durable Object session actor.",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@10.33.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "dev:local": "wrangler dev --local",
+    "deploy": "pnpm push:dev-env && wrangler deploy",
+    "push:dev-env": "npx wrangler secret bulk .dev.vars",
+    "tail": "wrangler tail --format pretty",
+    "sync:vad-assets": "node scripts/sync-vad-assets.mjs",
+    "check:vad-assets": "node scripts/sync-vad-assets.mjs --check",
+    "test": "vitest run",
+    "test:foundation": "vitest run tests/session-foundation",
+    "test:voice-loop": "vitest run tests/realtime-voice-loop",
+    "test:deploy": "vitest run tests/deployment-reliability",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@deepgram/sdk": "^5",
+    "@ricky0123/vad-web": "^0.0.30",
+    "elevenlabs": "^1",
+    "groq-sdk": "^1",
+    "jsonrepair": "^3.13.3",
+    "zod": "^4"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0",
+    "@cloudflare/workers-types": "^4",
+    "@types/node": "^24",
+    "typescript": "^6",
+    "vitest": "^4",
+    "wrangler": "^4"
+  }
+}
